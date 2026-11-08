@@ -56,6 +56,8 @@ std::vector<uint8_t> estados[NUM_SLOTS];
 // Rascunho reaproveitado para ler/escrever a VRAM pelo estado salvo.
 std::vector<uint8_t> rascunho;
 double fps = 60.0;
+SDL_AudioStream* audio = nullptr;
+int taxaAudio = 0;
 
 // Formato de pixel que o core vai usar. O padrão do libretro é 0RGB1555.
 retro_pixel_format formato = RETRO_PIXEL_FORMAT_0RGB1555;
@@ -188,9 +190,35 @@ void quadroDeVideo(const void* dados, unsigned largura, unsigned altura,
   }
 }
 
-// Sem áudio por enquanto: aceitamos as amostras e descartamos.
-void amostraDeAudio(int16_t, int16_t) {}
-size_t loteDeAudio(const int16_t*, size_t quadros) { return quadros; }
+// libretro entrega pares estéreo de inteiros de 16 bits. O stream copia
+// esses bytes e o SDL converte para o formato da saída padrão do sistema.
+size_t loteDeAudio(const int16_t* dados, size_t quadros) {
+  if (audio == nullptr || dados == nullptr || quadros == 0) {
+    return quadros;
+  }
+  // Impede que uma travada acumule segundos de som atrasado.
+  // Estéreo S16 = 4 bytes/quadro; 250 ms = taxaAudio bytes.
+  if (SDL_GetAudioStreamQueued(audio) > taxaAudio) {
+    SDL_ClearAudioStream(audio);
+  }
+  // Enviamos em blocos para manter o tamanho dentro do int aceito pelo SDL.
+  size_t enviados = 0;
+  while (enviados < quadros) {
+    size_t bloco = std::min(quadros - enviados, size_t{4096});
+    if (!SDL_PutAudioStreamData(audio, dados + enviados * 2,
+                                static_cast<int>(bloco * 2 * sizeof(int16_t)))) {
+      std::cerr << "falha ao enviar áudio: " << SDL_GetError() << '\n';
+      return enviados;
+    }
+    enviados += bloco;
+  }
+  return enviados;
+}
+
+void amostraDeAudio(int16_t esquerda, int16_t direita) {
+  const int16_t par[] = {esquerda, direita};
+  loteDeAudio(par, 1);
+}
 
 // O SDL já lê o teclado no laço de eventos do main.
 void lerEntrada() {}
@@ -314,6 +342,22 @@ bool emuladorCarregarJogo(const std::string& caminhoJogo) {
   retro_system_av_info av{};
   core.getSystemAvInfo(&av);
   fps = av.timing.fps;
+  if (!(av.timing.sample_rate >= 8000 && av.timing.sample_rate <= 384000)) {
+    std::cerr << "taxa de áudio inválida recebida do core\n";
+    return false;
+  }
+  taxaAudio = static_cast<int>(av.timing.sample_rate);
+  SDL_AudioSpec formatoAudio{};
+  formatoAudio.format = SDL_AUDIO_S16;
+  formatoAudio.channels = 2;
+  formatoAudio.freq = taxaAudio;
+  audio = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                                    &formatoAudio, nullptr, nullptr);
+  if (audio == nullptr || !SDL_ResumeAudioStreamDevice(audio)) {
+    std::cerr << "não abriu a saída de áudio: " << SDL_GetError() << '\n';
+    return false;
+  }
+  std::cout << "áudio: " << taxaAudio << " Hz, estéreo\n";
   std::cout << "conteúdo carregado: " << av.geometry.base_width << 'x'
             << av.geometry.base_height << " a " << fps << " fps\n";
   return true;
@@ -425,6 +469,12 @@ bool emuladorEscreverVram(const std::vector<uint16_t>& vram) {
 }
 
 void emuladorEncerrar() {
+  if (audio != nullptr) {
+    // Também fecha o dispositivo aberto junto com o stream.
+    SDL_DestroyAudioStream(audio);
+    audio = nullptr;
+  }
+  taxaAudio = 0;
   if (jogoCarregado) {
     core.unloadGame();
     jogoCarregado = false;

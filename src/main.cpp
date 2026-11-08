@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     std::cout << "uso: ./build/app <conteúdo> [core.so]\n";
     return 1;
   }
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
     std::cerr << SDL_GetError() << '\n';
     return 1;
   }
