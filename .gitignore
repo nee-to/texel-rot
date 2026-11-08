@@ -1,0 +1,10 @@
+build/
+.cache/
+
+# BIOS e conteúdo têm direitos autorais: nunca vão para o repositório.
+sistema/
+roms/
+
+# Capturas (F12)
+capturas/
+compile_commands.json
