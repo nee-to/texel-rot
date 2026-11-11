@@ -43,7 +43,7 @@ void trocarMolde(Sessao& s, int passo) {
 }  // namespace
 
 void iniciarSessao(Sessao& s, const std::string& pastaCapturas) {
-  s.mapa = criarMapa(s.mapaUniforme);
+  s.mapa = criarMapa(s.mapaUniforme, s.origem.largura, s.origem.altura);
   s.passo = 1.0 / emuladorFps();
   s.pastaCapturas = pastaCapturas;
 }
@@ -91,7 +91,7 @@ void tratarTecla(Sessao& s, const SDL_KeyboardEvent& tecla) {
     std::cout << "roteiro: " << (s.automatico ? "ligado" : "desligado") << '\n';
   } else if (k == SDLK_M) {
     s.mapaUniforme = !s.mapaUniforme;
-    s.mapa = criarMapa(s.mapaUniforme);
+    s.mapa = criarMapa(s.mapaUniforme, s.origem.largura, s.origem.altura);
     std::cout << (s.mapaUniforme ? "mapa uniforme\n" : "mapa radial\n");
 
     // --- Estados, pausa, captura ---
@@ -146,7 +146,14 @@ void montarQuadro(Sessao& s, double t) {
   }
 
   // ORIGEM = quadro do emulador. DESTINO = origem + faixas + blocos.
+  const int larguraAnterior = s.origem.largura;
+  const int alturaAnterior = s.origem.altura;
   emuladorCopiarQuadro(s.origem);
+  // O jogo pode mudar a resolução entre menus, vídeos e gameplay.
+  // O mapa precisa acompanhar os dois eixos, mesmo com igual total de pixels.
+  if (s.origem.largura != larguraAnterior || s.origem.altura != alturaAnterior) {
+    s.mapa = criarMapa(s.mapaUniforme, s.origem.largura, s.origem.altura);
+  }
   s.destino = s.origem;
   float forca = s.automatico ? intensidade(t) : s.intensidade;
   deslocarFaixas(s.origem, s.destino, s.mapa, forca, 24,

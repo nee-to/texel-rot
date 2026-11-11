@@ -2,20 +2,23 @@
 
 #include "imagem.hpp"
 
-Imagem criarImagem() {
-  // 320 * 180 * 4 = 230.400 bytes, todos começando em 0.
-  // std::vector cuida da memória sozinho: libera quando sai de escopo.
-  return Imagem(LARGURA * ALTURA * BYTES_POR_PIXEL, 0);
+#include <cstddef>
+
+Imagem criarImagem(int largura, int altura) {
+  if (largura <= 0 || altura <= 0) return {};
+  return {largura, altura,
+          std::vector<uint8_t>(static_cast<size_t>(largura) * altura * BYTES_POR_PIXEL, 0)};
 }
 
 Cor ler(const Imagem& buf, int x, int y) {
+  if (buf.pixels.empty()) return {0, 0, 0};
   // "Prender" (clamp) a coordenada: -3 vira 0, 325 vira 319.
   if (x < 0) x = 0;
-  if (x >= LARGURA) x = LARGURA - 1;
+  if (x >= buf.largura) x = buf.largura - 1;
   if (y < 0) y = 0;
-  if (y >= ALTURA) y = ALTURA - 1;
-  int i = BYTES_POR_PIXEL * (y * LARGURA + x);
-  return {buf[i + 0], buf[i + 1], buf[i + 2]};
+  if (y >= buf.altura) y = buf.altura - 1;
+  int i = BYTES_POR_PIXEL * (y * buf.largura + x);
+  return {buf.pixels[i + 0], buf.pixels[i + 1], buf.pixels[i + 2]};
 }
 
 // Escreve uma cor no buffer. O "&" em "Imagem& buf" é uma
@@ -24,15 +27,15 @@ Cor ler(const Imagem& buf, int x, int y) {
 void pintar(Imagem& buf, int x, int y, Cor c) {
   // Proteção de limites: ignoramos pixels fora da imagem.
   // Escrever fora do vector seria comportamento indefinido em C++.
-  if (x < 0 || x >= LARGURA || y < 0 || y >= ALTURA) {
+  if (x < 0 || x >= buf.largura || y < 0 || y >= buf.altura) {
     return;
   }
   // Mesmo índice que você usava no Canvas: 4 * (y * largura + x)
-  int i = BYTES_POR_PIXEL * (y * LARGURA + x);
-  buf[i + 0] = c.r;
-  buf[i + 1] = c.g;
-  buf[i + 2] = c.b;
-  buf[i + 3] = 255; // alfa: totalmente opaco
+  int i = BYTES_POR_PIXEL * (y * buf.largura + x);
+  buf.pixels[i + 0] = c.r;
+  buf.pixels[i + 1] = c.g;
+  buf.pixels[i + 2] = c.b;
+  buf.pixels[i + 3] = 255; // alfa: totalmente opaco
 }
 
 // Retângulo preenchido. (x, y) = canto superior esquerdo.

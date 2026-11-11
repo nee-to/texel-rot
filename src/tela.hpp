@@ -35,6 +35,6 @@ bool criarTela(Tela& tela, const char* titulo, int escala);
 // Envia a imagem para a textura e mostra na janela.
 void apresentar(Tela& tela, const Imagem& imagem);
 
-// Salva a imagem ampliada 4x em PNG na pasta (criada se não existir).
+// Salva os pixels da imagem em PNG, nas dimensões recebidas (sem ampliar).
 // Nome: AAAA-MM-DD_HH-MM-SS_mmm.png
 void salvarCaptura(const Imagem& imagem, const std::string& pasta);

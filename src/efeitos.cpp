@@ -12,22 +12,22 @@ float fracao(uint32_t h) { return static_cast<float>(h % 1000) / 1000.0f; }
 
 }  // namespace
 
-Mapa criarMapa(bool uniforme) {
-  Mapa mapa(LARGURA * ALTURA, 1.0f);
+Mapa criarMapa(bool uniforme, int largura, int altura) {
+  Mapa mapa(largura * altura, 1.0f);
   if (uniforme) {
     return mapa;
   }
   // Distância até o centro, normalizada: 0 no centro, 1 no canto.
   // Até 0.3: estável. De 0.3 a 1: sobe de 0 a 1.
   // Exemplo: d = 0.65 -> (0.65 - 0.3) / 0.7 = 0.5
-  const float cx = LARGURA / 2.0f, cy = ALTURA / 2.0f;
+  const float cx = largura / 2.0f, cy = altura / 2.0f;
   const float maxD = std::sqrt(cx * cx + cy * cy);
-  for (int y = 0; y < ALTURA; y++) {
-    for (int x = 0; x < LARGURA; x++) {
+  for (int y = 0; y < altura; y++) {
+    for (int x = 0; x < largura; x++) {
       float dx = x - cx, dy = y - cy;
       float d = std::sqrt(dx * dx + dy * dy) / maxD;
       float v = (d - 0.3f) / 0.7f;
-      mapa[y * LARGURA + x] = v < 0.0f ? 0.0f : v;
+      mapa[y * largura + x] = v < 0.0f ? 0.0f : v;
     }
   }
   return mapa;
@@ -35,6 +35,7 @@ Mapa criarMapa(bool uniforme) {
 
 void deslocarFaixas(const Imagem& origem, Imagem& destino, const Mapa& mapa,
                     float intensidade, int amplitude, uint32_t momento) {
+  const int largura = origem.largura, altura = origem.altura;
   if (intensidade <= 0.0f) {
     return;
   }
@@ -46,9 +47,9 @@ void deslocarFaixas(const Imagem& origem, Imagem& destino, const Mapa& mapa,
   int m = static_cast<int>(momento);
 
   int inicio = 0;
-  while (inicio < ALTURA) {
+  while (inicio < altura) {
     // Cada faixa sorteia altura (2 a 7 linhas), limiar e deslocamento.
-    int altura = 2 + static_cast<int>(ruido(inicio, m + 7) % 6);
+    int alturaFaixa = 2 + static_cast<int>(ruido(inicio, m + 7) % 6);
     uint32_t h = ruido(inicio, m);
     // Limiar: quão instável o pixel precisa estar para a faixa pegá-lo.
     float limiar = fracao(h);
@@ -56,23 +57,24 @@ void deslocarFaixas(const Imagem& origem, Imagem& destino, const Mapa& mapa,
     int desloc = static_cast<int>((h >> 10) % (2 * a + 1)) - a;
 
     if (desloc != 0) {
-      for (int y = inicio; y < inicio + altura && y < ALTURA; y++) {
-        for (int x = 0; x < LARGURA; x++) {
-          if (mapa[y * LARGURA + x] * intensidade > limiar) {
-            // Volta na largura. O "+ LARGURA" evita resto negativo:
+      for (int y = inicio; y < inicio + alturaFaixa && y < altura; y++) {
+        for (int x = 0; x < largura; x++) {
+          if (mapa[y * largura + x] * intensidade > limiar) {
+            // Volta na largura. O "+ largura" evita resto negativo:
             // em C++, -3 % 320 = -3.
-            int xOrigem = ((x - desloc) % LARGURA + LARGURA) % LARGURA;
+            int xOrigem = ((x - desloc) % largura + largura) % largura;
             pintar(destino, x, y, ler(origem, xOrigem, y));
           }
         }
       }
     }
-    inicio += altura;
+    inicio += alturaFaixa;
   }
 }
 
 void trocarBlocos(const Imagem& origem, Imagem& destino, const Mapa& mapa,
                   float intensidade, uint32_t momento) {
+  const int largura = origem.largura, altura = origem.altura;
   if (intensidade <= 0.0f) {
     return;
   }
@@ -80,11 +82,11 @@ void trocarBlocos(const Imagem& origem, Imagem& destino, const Mapa& mapa,
   const int BA = 4;  // altura do bloco
   int m = static_cast<int>(momento);
 
-  for (int by = 0; by < ALTURA / BA; by++) {
-    for (int bx = 0; bx < LARGURA / BL; bx++) {
+  for (int by = 0; by < altura / BA; by++) {
+    for (int bx = 0; bx < largura / BL; bx++) {
       // A instabilidade do bloco é a do pixel do centro dele.
       float nivel =
-          mapa[(by * BA + BA / 2) * LARGURA + bx * BL + BL / 2] * intensidade;
+          mapa[(by * BA + BA / 2) * largura + bx * BL + BL / 2] * intensidade;
       uint32_t h = ruido(bx + m * 97, by + m * 31);
       // "+ 0.15": blocos são mais raros que faixas.
       if (nivel <= fracao(h) + 0.15f) {

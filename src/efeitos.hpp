@@ -13,7 +13,7 @@
 #include "imagem.hpp"
 
 // Mapa radial (centro estável, bordas instáveis) ou uniforme (tudo 1).
-Mapa criarMapa(bool uniforme);
+Mapa criarMapa(bool uniforme, int largura = LARGURA, int altura = ALTURA);
 
 // Faixas horizontais lidas deslocadas para os lados.
 // amplitude = deslocamento máximo em px com intensidade 1.

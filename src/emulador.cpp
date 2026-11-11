@@ -63,9 +63,7 @@ int taxaAudio = 0;
 retro_pixel_format formato = RETRO_PIXEL_FORMAT_0RGB1555;
 
 // Último quadro recebido, já convertido para RGBA, no tamanho nativo.
-std::vector<uint8_t> quadroNativo;
-unsigned quadroLargura = 0;
-unsigned quadroAltura = 0;
+Imagem quadroNativo;
 
 // Procura uma função no .so pelo nome e guarda o endereço em "destino".
 // "template" = a mesma função serve para qualquer tipo de ponteiro.
@@ -142,9 +140,10 @@ void quadroDeVideo(const void* dados, unsigned largura, unsigned altura,
   if (dados == nullptr) {
     return;  // quadro repetido: mantemos o anterior
   }
-  quadroLargura = largura;
-  quadroAltura = altura;
-  quadroNativo.resize(static_cast<size_t>(largura) * altura * 4);
+  if (quadroNativo.largura != static_cast<int>(largura) ||
+      quadroNativo.altura != static_cast<int>(altura)) {
+    quadroNativo = criarImagem(static_cast<int>(largura), static_cast<int>(altura));
+  }
 
   const auto* bytes = static_cast<const uint8_t*>(dados);
 
@@ -182,10 +181,10 @@ void quadroDeVideo(const void* dados, unsigned largura, unsigned altura,
       }
 
       size_t i = (static_cast<size_t>(y) * largura + x) * 4;
-      quadroNativo[i + 0] = r;
-      quadroNativo[i + 1] = g;
-      quadroNativo[i + 2] = b;
-      quadroNativo[i + 3] = 255;
+      quadroNativo.pixels[i + 0] = r;
+      quadroNativo.pixels[i + 1] = g;
+      quadroNativo.pixels[i + 2] = b;
+      quadroNativo.pixels[i + 3] = 255;
     }
   }
 }
@@ -368,21 +367,8 @@ double emuladorFps() { return fps; }
 void emuladorRodarQuadro() { core.run(); }
 
 void emuladorCopiarQuadro(Imagem& destino) {
-  if (quadroNativo.empty()) {
-    return;
-  }
-  // Reamostragem "vizinho mais próximo": para cada pixel do destino,
-  // pegamos o pixel correspondente do quadro nativo.
-  // Exemplo: nativo 640 de largura, destino 320 -> x = 10 lê x = 20.
-  for (int y = 0; y < ALTURA; y++) {
-    unsigned sy = static_cast<unsigned>(y) * quadroAltura / ALTURA;
-    for (int x = 0; x < LARGURA; x++) {
-      unsigned sx = static_cast<unsigned>(x) * quadroLargura / LARGURA;
-      size_t i = (static_cast<size_t>(sy) * quadroLargura + sx) * 4;
-      pintar(destino, x, y,
-             {quadroNativo[i], quadroNativo[i + 1], quadroNativo[i + 2]});
-    }
-  }
+  // Cópia exata: nenhuma linha/coluna recebida é descartada.
+  if (!quadroNativo.pixels.empty()) destino = quadroNativo;
 }
 
 bool emuladorSalvarEstado(int slot) {

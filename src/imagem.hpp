@@ -9,10 +9,7 @@
 #include <cstdint>  // uint8_t, uint32_t
 #include <vector>
 
-// Resolução interna. "constexpr" = valor conhecido em tempo de compilação.
-// "inline" permite definir a constante num header incluído por vários .cpp.
-// 320 x 240 (4:3) é a resolução mais comum dos jogos de PS1. Quadros de
-// outros tamanhos (256, 368, 512, 640 de largura...) são reamostrados.
+// Tamanho inicial, antes de receber o primeiro quadro; não limita o core.
 inline constexpr int LARGURA = 320;
 inline constexpr int ALTURA = 240;
 
@@ -25,17 +22,21 @@ struct Cor {
   uint8_t r, g, b;
 };
 
-// Apelido de tipo: "Imagem" é o mesmo que std::vector<uint8_t>.
-// Só deixa as assinaturas mais legíveis; não cria um tipo novo.
-using Imagem = std::vector<uint8_t>;
+// Dimensões viajam junto dos pixels, como width/height/data de ImageData.
+struct Imagem {
+  int largura = 0;
+  int altura = 0;
+  std::vector<uint8_t> pixels;
+  bool operator==(const Imagem&) const = default;
+};
 
 // Um valor float por pixel (0 a 1), mesma ordem de linhas que a Imagem,
 // mas sem o "* 4": índice = y * LARGURA + x.
 // Usado como mapa de instabilidade (onde a imagem pode se corromper).
 using Mapa = std::vector<float>;
 
-// Cria um buffer LARGURA x ALTURA com todos os bytes em 0.
-Imagem criarImagem();
+// Cria um buffer nas dimensões pedidas, com todos os bytes em 0.
+Imagem criarImagem(int largura = LARGURA, int altura = ALTURA);
 
 // Escreve uma cor no pixel (x, y). Fora dos limites: não faz nada.
 void pintar(Imagem& buf, int x, int y, Cor c);

@@ -16,17 +16,19 @@ uint16_t& valorEm(Vram& vram, RegiaoVram r, int x, int y) {
 }
 
 void desenharVram(const Vram& vram, RegiaoVram selecao, Imagem& destino) {
-  // Contorno da seleção na escala da tela.
-  const int sx0 = selecao.x * LARGURA / VRAM_LARGURA;
-  const int sx1 = (selecao.x + selecao.l) * LARGURA / VRAM_LARGURA - 1;
-  const int sy0 = selecao.y * ALTURA / VRAM_ALTURA;
-  const int sy1 = (selecao.y + selecao.a) * ALTURA / VRAM_ALTURA - 1;
+  if (vram.size() != static_cast<std::size_t>(VRAM_LARGURA * VRAM_ALTURA)) return;
+  if (destino.largura != VRAM_LARGURA || destino.altura != VRAM_ALTURA) {
+    destino = criarImagem(VRAM_LARGURA, VRAM_ALTURA);
+  }
+  // Uma palavra de VRAM por pixel; o contorno é apenas uma sobreposição.
+  const int sx0 = selecao.x;
+  const int sx1 = selecao.x + selecao.l - 1;
+  const int sy0 = selecao.y;
+  const int sy1 = selecao.y + selecao.a - 1;
 
-  for (int y = 0; y < ALTURA; y++) {
-    int vy = y * VRAM_ALTURA / ALTURA;
-    for (int x = 0; x < LARGURA; x++) {
-      int vx = x * VRAM_LARGURA / LARGURA;
-      uint16_t p = vram[vy * VRAM_LARGURA + vx];
+  for (int y = 0; y < VRAM_ALTURA; y++) {
+    for (int x = 0; x < VRAM_LARGURA; x++) {
+      uint16_t p = vram[y * VRAM_LARGURA + x];
       // Formato do PS1: bits 0-4 = R, 5-9 = G, 10-14 = B.
       Cor c = {static_cast<uint8_t>((p & 0x1F) * 255 / 31),
                static_cast<uint8_t>(((p >> 5) & 0x1F) * 255 / 31),

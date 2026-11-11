@@ -29,6 +29,14 @@ cmake --build build
 As corrupções de VRAM dependem de cores cujo estado salvo guarda a VRAM
 (`GPURAM`, Beetle PSX). Com outros cores, só os efeitos de imagem funcionam.
 
+## Resolução e capturas
+
+O quadro mantém a largura e a altura entregues pelo core, inclusive quando
+mudam durante o jogo. F12 salva um PNG nessa resolução, sem redução para
+320×240 nem ampliação artificial. Em F1, a visualização da VRAM é 1024×512.
+A janela ajusta apenas a apresentação; os pixels exportados não são reduzidos.
+Capturas antigas permanecem intactas. Testes: `ctest --test-dir build --output-on-failure`.
+
 ## Teclas
 
 | | |

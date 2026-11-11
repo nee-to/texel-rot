@@ -37,8 +37,7 @@ double emuladorFps();
 // Emula um quadro.
 void emuladorRodarQuadro();
 
-// Copia o último quadro para "destino", reamostrado para LARGURA x ALTURA
-// sem suavização.
+// Copia pixels e dimensões do último quadro recebido, sem reamostragem.
 void emuladorCopiarQuadro(Imagem& destino);
 
 // Estados salvos: guardar e restaurar o console inteiro, em slots 0..3.
