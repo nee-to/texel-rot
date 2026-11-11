@@ -28,6 +28,11 @@ inline constexpr int NUM_SLOTS = 4;
 bool emuladorCarregarCore(const std::string& caminhoCore,
                           const std::string& pastaSistema);
 
+// Define uma opção do core (ex.: "beetle_psx_internal_resolution" = "2x").
+// Chame antes de carregar o jogo: o core lê as opções ao iniciar o conteúdo.
+// Opções não definidas ficam no padrão do core.
+void emuladorDefinirOpcao(const std::string& chave, const std::string& valor);
+
 // Carrega o conteúdo (.cue, .chd, .pbp, .bin...).
 bool emuladorCarregarJogo(const std::string& caminhoJogo);
 

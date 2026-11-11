@@ -165,6 +165,22 @@ void testarVram() {
   std::cout << "PASS: VRAM completa, PNG e limites dos moldes\n";
 }
 
+// O core consulta opções pelo callback de ambiente: só as definidas
+// devem ser respondidas, e a última definição de uma chave vale.
+void testarOpcoes() {
+  retro_variable v{"beetle_psx_internal_resolution", nullptr};
+  exigir(!ambiente(RETRO_ENVIRONMENT_GET_VARIABLE, &v) && v.value == nullptr,
+         "opção não definida não deveria ter valor");
+  emuladorDefinirOpcao("beetle_psx_internal_resolution", "2x");
+  emuladorDefinirOpcao("beetle_psx_internal_resolution", "4x");
+  exigir(ambiente(RETRO_ENVIRONMENT_GET_VARIABLE, &v) && v.value != nullptr &&
+             std::string(v.value) == "4x",
+         "opção definida não chegou ao core");
+  retro_variable outra{"beetle_psx_pgxp_mode", nullptr};
+  exigir(!ambiente(RETRO_ENVIRONMENT_GET_VARIABLE, &outra), "chave errada respondida");
+  exigir(!ambiente(RETRO_ENVIRONMENT_GET_VARIABLE, nullptr), "nullptr aceito");
+}
+
 int main(int argc, char** argv) {
   try {
     exigir(SDL_Init(SDL_INIT_VIDEO), SDL_GetError());
@@ -172,6 +188,7 @@ int main(int argc, char** argv) {
     if (modo == "pixels" || modo == "all") testarPixels();
     if (modo == "session" || modo == "all") testarSessao();
     if (modo == "vram" || modo == "all") testarVram();
+    if (modo == "options" || modo == "all") testarOpcoes();
     SDL_Quit();
     return 0;
   } catch (const std::exception& erro) {

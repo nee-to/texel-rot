@@ -42,7 +42,7 @@ if(BUILD_TESTING)
   target_include_directories(video_test SYSTEM PRIVATE third_party/libretro)
   target_compile_options(video_test PRIVATE -Wall -Wextra -Wpedantic)
   target_link_libraries(video_test PRIVATE SDL3::SDL3)
-  foreach(caso pixels session vram)
+  foreach(caso pixels session vram options)
     add_test(NAME video_${caso} COMMAND video_test ${caso})
     set_tests_properties(video_${caso} PROPERTIES
       ENVIRONMENT "SDL_VIDEO_DRIVER=offscreen;SDL_AUDIO_DRIVER=dummy")

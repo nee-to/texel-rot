@@ -1,6 +1,6 @@
 // texel-rot — corrupção visual em tempo real sobre um core libretro.
 //
-// Uso: ./build/app <conteúdo> [core.so]
+// Uso: ./build/app <conteúdo> [core.so] [--escala N] [--pgxp] [--sem-dither]
 // Core padrão: Beetle PSX (/usr/lib/libretro/mednafen_psx_libretro.so).
 // BIOS: pasta sistema/ do projeto. Capturas: pasta capturas/.
 //
@@ -76,16 +76,54 @@ int rodar(const std::string& conteudo, const std::string& core) {
 
 }  // namespace
 
+const char* USO =
+    "uso: ./build/app <conteúdo> [core.so] [--escala N] [--pgxp] [--sem-dither]\n"
+    "  --escala N     resolução interna do Beetle PSX: 1, 2, 4, 8 ou 16\n"
+    "  --pgxp         geometria mais precisa (menos tremido nos polígonos)\n"
+    "  --sem-dither   desliga o pontilhado e usa cores de 32 bits\n";
+
 int main(int argc, char** argv) {
-  if (argc < 2) {
-    std::cout << "uso: ./build/app <conteúdo> [core.so]\n";
+  std::string conteudo;
+  std::string core = CORE_PADRAO;
+  int posicionais = 0;
+
+  // Opções com "--" podem vir em qualquer posição; o resto é conteúdo e core.
+  for (int i = 1; i < argc; i++) {
+    std::string arg = argv[i];
+    if (arg == "--escala" && i + 1 < argc) {
+      std::string n = argv[++i];
+      if (n != "1" && n != "2" && n != "4" && n != "8" && n != "16") {
+        std::cerr << "escala inválida: " << n << '\n' << USO;
+        return 1;
+      }
+      // "1x(native)" é o nome que o core usa para a escala original.
+      emuladorDefinirOpcao("beetle_psx_internal_resolution",
+                           n == "1" ? "1x(native)" : n + "x");
+    } else if (arg == "--pgxp") {
+      emuladorDefinirOpcao("beetle_psx_pgxp_mode", "memory only");
+    } else if (arg == "--sem-dither") {
+      emuladorDefinirOpcao("beetle_psx_dither_mode", "disabled");
+      emuladorDefinirOpcao("beetle_psx_depth", "32bpp");
+    } else if (arg.rfind("--", 0) == 0) {
+      std::cerr << "opção desconhecida: " << arg << '\n' << USO;
+      return 1;
+    } else if (posicionais == 0) {
+      conteudo = arg;
+      posicionais++;
+    } else if (posicionais == 1) {
+      core = arg;
+      posicionais++;
+    }
+  }
+  if (conteudo.empty()) {
+    std::cout << USO;
     return 1;
   }
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
     std::cerr << SDL_GetError() << '\n';
     return 1;
   }
-  int resultado = rodar(argv[1], argc >= 3 ? argv[2] : CORE_PADRAO);
+  int resultado = rodar(conteudo, core);
   SDL_Quit();
   return resultado;
 }

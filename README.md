@@ -26,6 +26,34 @@ cmake --build build
 ./build/app caminho/do/conteudo.cue [caminho/do/core.so]
 ```
 
+### Opções de qualidade (Beetle PSX)
+
+```bash
+./build/app jogo.cue --escala 4 --pgxp --sem-dither
+```
+
+| Opção | Efeito |
+|---|---|
+| `--escala N` | resolução interna 1, 2, 4, 8 ou 16: o 3D é desenhado com N× mais pixels em cada eixo |
+| `--pgxp` | geometria mais precisa, menos tremido nos polígonos |
+| `--sem-dither` | sem pontilhado, cores de 32 bits |
+
+A VRAM lida e corrompida continua sendo a original de 1024×512; o core
+redesenha a cena em alta resolução a partir dela, então os moldes seguem
+funcionando. A renderização é por CPU e os efeitos de imagem (0–9) custam
+proporcionalmente aos pixels. Medido com L'Invasion Vient de l'Espace (PAL,
+50 quadros/s necessários), build otimizado:
+
+| Escala | Quadro | Sem efeitos de imagem | Intensidade 3 | Intensidade 9 |
+|---|---|---|---|---|
+| 1 | 350×288 | 196/s | — | 155/s |
+| 2 | 700×576 | — | — | 75/s |
+| 4 | 1400×1152 | 64/s | 43/s | 26/s |
+| 8 | 2800×2304 | — | — | 7,5/s |
+
+Para tocar ao vivo com efeitos de imagem, use `--escala 2`. `--escala 4`
+roda em tempo real com corrupção de VRAM, mas desacelera com os efeitos 1–9.
+
 As corrupções de VRAM dependem de cores cujo estado salvo guarda a VRAM
 (`GPURAM`, Beetle PSX). Com outros cores, só os efeitos de imagem funcionam.
 

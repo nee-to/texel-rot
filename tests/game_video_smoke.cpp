@@ -33,6 +33,10 @@ int main(int argc, char** argv) {
   if (argc < 4) return 2;
   try {
     conferir(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO), SDL_GetError());
+    // 5º argumento opcional: escala interna do Beetle (1, 2, 4, 8, 16).
+    if (argc > 5 && std::string(argv[5]) != "1") {
+      emuladorDefinirOpcao("beetle_psx_internal_resolution", std::string(argv[5]) + "x");
+    }
     conferir(emuladorCarregarCore("/usr/lib/libretro/mednafen_psx_libretro.so", argv[2]), "core");
     conferir(emuladorCarregarJogo(argv[1]), "conteúdo");
     {

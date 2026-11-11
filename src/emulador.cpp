@@ -13,6 +13,7 @@
 #include <cstring>  // std::memcpy
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <vector>
 
 #include "libretro.h"
@@ -55,6 +56,10 @@ std::vector<uint8_t> dadosJogo;  // só usado se o core pedir o jogo na memória
 std::vector<uint8_t> estados[NUM_SLOTS];
 // Rascunho reaproveitado para ler/escrever a VRAM pelo estado salvo.
 std::vector<uint8_t> rascunho;
+// Opções do core pedidas pelo frontend (chave -> valor). Um std::map
+// mantém cada string no mesmo lugar da memória, então podemos devolver
+// c_str() ao core com segurança enquanto o programa roda.
+std::map<std::string, std::string> opcoes;
 double fps = 60.0;
 SDL_AudioStream* audio = nullptr;
 int taxaAudio = 0;
@@ -121,14 +126,27 @@ bool ambiente(unsigned comando, void* dados) {
       static_cast<retro_log_callback*>(dados)->log = logDoCore;
       return true;
 
+    case RETRO_ENVIRONMENT_GET_VARIABLE: {
+      // O core pergunta o valor de uma opção pela chave. Respondemos só
+      // as que definimos; nas outras, false = o core usa o padrão dele.
+      auto* variavel = static_cast<retro_variable*>(dados);
+      if (variavel == nullptr || variavel->key == nullptr) return false;
+      auto it = opcoes.find(variavel->key);
+      if (it == opcoes.end()) {
+        variavel->value = nullptr;
+        return false;
+      }
+      variavel->value = it->second.c_str();
+      return true;
+    }
+
     case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
-      // Nenhuma opção do core mudou.
+      // As opções só são definidas antes de carregar o jogo.
       *static_cast<bool*>(dados) = false;
       return true;
 
     default:
-      // Opções do core, renderização por GPU etc.: não suportamos.
-      // O core usa os valores padrão.
+      // Renderização por GPU etc.: não suportamos.
       return false;
   }
 }
@@ -422,6 +440,10 @@ long long acharVram(const std::vector<uint8_t>& estado) {
 }
 
 }  // namespace
+
+void emuladorDefinirOpcao(const std::string& chave, const std::string& valor) {
+  opcoes[chave] = valor;
+}
 
 bool emuladorLerVram(std::vector<uint16_t>& vram) {
   rascunho.resize(core.serializeSize());
